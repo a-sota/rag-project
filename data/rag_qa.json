@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "question": "RAGとは何か？",
+    "answer": "RAGは検索した文書をもとに回答を生成する手法である。"
+  },
+  {
+    "id": 2,
+    "question": "embeddingとは何か？",
+    "answer": "embeddingはテキストを意味を保ったままベクトルに変換する技術である。"
+  },
+  {
+    "id": 3,
+    "question": "chunkとは何か？",
+    "answer": "chunkは文書を分割した意味単位のテキスト片である。"
+  }
+]
