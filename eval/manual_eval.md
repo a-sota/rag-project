@@ -1,4 +1,4 @@
-# Manual Evaluation Log
+# Manual Evaluation Log1
 
 ## Date
 - 2026-04-09
@@ -129,7 +129,7 @@
 - 一方で top2, top3 には RAG という語に引っ張られた関連文書も残っており、順位付けにはまだ改善余地がある。
 
 
-## Day 5: top_k Comparison
+# Manual Evaluation Log2
 
 ### Purpose
 - top_k = 1, 3, 5 を比較し、retrieval と generation の挙動の違いを観察する。
@@ -301,3 +301,221 @@
 - 定義が明確で対応文書がある質問では、top_k=1,3,5 の差は小さかった。
 - 一方で、答えがデータに存在しない質問では top_k=5 にすると generation が半関連文書から無理に答えを作る傾向が見られた。
 - 現時点では top_k の微調整よりも、原因・理由系Q&Aの追加や言い換え表現の拡張のほうが改善効果は大きいと考えられる。
+
+#　Manual Evaluation Log3
+
+## Purpose
+- 原因・理由系Q&Aを追加したあとに、言い換え・抽象化質問でも答えられるか確認する
+- retrieval と generation のどちらが弱いかを観察する
+- 今後さらに追加すべき質問タイプを見つける
+
+## Evaluation Criteria
+- retrieval_ok:
+  - yes = 正しい文書が top-1 または top-k 内にある
+  - no = 正しい文書が取得できていない
+- generation_ok:
+  - yes = 回答が参照文書に忠実で、質問にも正しく答えている
+  - no = 間違っている、ずれている、余計な補完がある
+- failure_type:
+  - no_issue
+  - retrieval_fail
+  - generation_fail
+  - data_missing
+
+---
+
+## 1
+- type: paraphrase
+- question: 検索で外すと回答はどうなる？
+- expected: retrievalが失敗すると、誤った文脈に基づく誤答や、質問に答えられない回答が出やすくなる。
+- retrieved_top1: retrievalが失敗すると、誤った文脈に基づく誤答や、質問に答えられない回答が出やすくなる。
+- retrieval_ok: yes
+- generated_answer: retrievalが失敗すると、誤った文脈に基づく誤答や、質問に答えられない回答が出やすくなる。
+- generation_ok: yes
+- failure_type: no_issue
+- note: 原因系の言い換え質問に自然に対応できている。
+
+## 2
+- type: paraphrase
+- question: 文脈が足りないと何がまずい？
+- expected: 文脈不足だと回答に必要な情報が足りず、LLMが不完全な回答や曖昧な回答をしやすくなる。
+- retrieved_top1: 文脈不足だと回答に必要な情報が足りず、LLMが不完全な回答や曖昧な回答をしやすくなるためである。
+- retrieval_ok: yes
+- generated_answer: 脈が足りないと回答に必要な情報が足りず、LLMが不完全な回答や曖昧な回答をしやすくなるため、回答品質が下がることがまずいです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: 生成文に軽い言い換えはあるが、内容は期待答えに忠実。
+
+## 3
+- type: paraphrase
+- question: top_kを増やしすぎると、なんで危ないの？
+- expected: top_kを増やしすぎるとノイズ文書が増え、LLMが誤った情報に引っ張られやすくなるためである。
+- retrieved_top1: top_kを増やしすぎるとノイズ文書が増え、LLMが誤った情報に引っ張られやすくなるためである。
+- retrieval_ok: yes
+- generated_answer: top_kを増やしすぎるとノイズ文書が増え、LLMが誤った情報に引っ張られやすくなるため危ないです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: Day 5 の学びがデータとして機能している。
+
+## 4
+- type: paraphrase
+- question: 無理に答えさせない方がいいのはなぜ？
+- expected: 分からない場合は分からないと答えさせるのは、retrieval失敗やデータ不足のときに無理に補完して誤答するのを防ぐためである。
+- retrieved_top1: 参照文書にない情報を無理に補完させないためであり、誤答を減らすためである。
+- retrieval_ok: yes
+- generated_answer: 無理に答えさせない方がいいのは、参照文書にない情報を無理に補完させないためであり、誤答を減らすためです。また、retrieval失敗やデータ不足のときに無理に補完して誤答するのを防ぐためでもあります。
+- generation_ok: yes
+- failure_type: no_issue
+- note: retrieved_top1 は期待答えの一部だが、generation が不足分を自然に補っている。
+
+## 5
+- type: paraphrase
+- question: RAGが変な答えを出すのはどんなとき？
+- expected: RAGで間違った答えが出る主な原因は、retrievalの失敗、文脈不足、ノイズ混入、hallucinationなどである。
+- retrieved_top1: RAGは検索した文書をもとに回答を生成する手法である。
+- retrieval_ok: no
+- generated_answer: RAGが変な答えを出すのは、retrievalの失敗、文脈不足、ノイズ混入、hallucinationなどが原因のときです。
+- generation_ok: yes
+- failure_type: retrieval_fail
+- note: top1 はRAGの定義で意図した文書ではないが、生成回答は期待内容に近い。top-k内の別文書参照かモデルの一般化が効いている可能性があり、faithfulness はやや要確認。
+
+## 6
+- type: paraphrase
+- question: 質問もベクトル化するのは何のため？
+- expected: 質問もembeddingするのは、文書ベクトルと同じ空間で意味の近さを比較するためである。
+- retrieved_top1: 質問もembeddingするのは、文書ベクトルと同じ空間で意味の近さを比較するためである。
+- retrieval_ok: yes
+- generated_answer: 質問もベクトル化するのは、文書ベクトルと同じ空間で意味の近さを比較し、意味の近い文書を検索できるようにするためです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: 理由系の paraphrase に安定して対応できている。
+
+## 7
+- type: abstract
+- question: 同じembeddingモデルを使わないと何が困る？
+- expected: 文書と質問を同じembeddingモデルで変換するのは、同じ意味空間で扱うためである。
+- retrieved_top1: 文書と質問を同じembeddingモデルで変換するのは、同じ意味空間で扱うためである。
+- retrieval_ok: yes
+- generated_answer: 参照文書からは分かりません。
+- generation_ok: no
+- failure_type: generation_fail
+- note: retrieval は成功しているが、「何が困るか」という抽象的な聞き方に対して generation が展開できていない。
+
+## 8
+- type: abstract
+- question: 検索対象が増えたときにFAISSを使う理由は？
+- expected: FAISSのようなベクトル検索ライブラリを使うのは、大量の検索対象から近い文書を高速に探すためである。
+- retrieved_top1: FAISSのようなベクトル検索ライブラリを使うのは、大量の検索対象から近い文書を高速に探すためである。
+- retrieval_ok: yes
+- generated_answer: FAISSのようなベクトル検索ライブラリを使うのは、大量の検索対象から近い文書を高速に探すためである。
+- generation_ok: yes
+- failure_type: no_issue
+- note: abstract質問でも安定して正答。
+
+## 9
+- type: paraphrase
+- question: 言い換えを増やすと検索が良くなるのはなぜ？
+- expected: 言い換え表現をデータに追加すると、多様な質問表現に対応しやすくなり、retrievalが改善する。
+- retrieved_top1: 言い換え表現をデータに追加すると、多様な質問表現に対応しやすくなり、retrievalが改善する。
+- retrieval_ok: yes
+- generated_answer: 言い換え表現をデータに追加すると、多様な質問表現に対応しやすくなり、retrievalが改善するためです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: Day 4 の改善経験と整合的な出力。
+
+## 10
+- type: abstract
+- question: 定義問題でtop_kの差が出にくいのはなぜ？
+- expected: 定義系の質問では、正しい文書が上位に来やすく、追加文書の影響が小さいため、top_kの差が出にくい。
+- retrieved_top1: 定義系の質問では、正しい文書が上位に来やすく、追加文書の影響が小さいため、top_kの差が出にくい。
+- retrieval_ok: yes
+- generated_answer: 定義系の質問では、正しい文書が上位に来やすく、追加文書の影響が小さいため、top_kの差が出にくいからです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: Day 5 で観察した傾向をそのまま説明できている。
+
+## 11
+- type: abstract
+- question: 答えがデータにない質問で、件数を増やすと危ないのはなぜ？
+- expected: data missingの質問でtop_k=5が危険なのは、半関連のノイズ文書が増え、もっともらしい誤答を生成しやすくなるためである。
+- retrieved_top1: data missingの質問でtop_k=5が危険なのは、半関連のノイズ文書が増え、もっともらしい誤答を生成しやすくなるためである。
+- retrieval_ok: yes
+- generated_answer: 答えがデータにない質問で件数（top_k）を増やすと危ないのは、半関連のノイズ文書が増え、LLMがそれらの誤った情報に引っ張られてもっともらしい誤答を生成しやすくなるためです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: data missing に関する理解がかなり良い。
+
+## 12
+- type: abstract
+- question: 検索と生成を分けて見るべきなのはなぜ？
+- expected: retrievalとgenerationを分けて評価するのは、どこで失敗しているかを切り分け、改善箇所を特定するためである。
+- retrieved_top1: FAISSのようなベクトル検索ライブラリを使うのは、大量の検索対象から近い文書を高速に探すためである。
+- retrieval_ok: no
+- generated_answer: 検索と生成を分けて見るべきなのは、どこで失敗しているかを切り分け、改善箇所を特定するためである。
+- generation_ok: yes
+- failure_type: retrieval_fail
+- note: top1 はズレているが、生成回答は期待答えに近い。top-k 内の別文書利用か補完の可能性があり、faithfulness はやや注意。
+
+## 13
+- type: paraphrase
+- question: 一度にいろいろ直すと何が困る？
+- expected: 改善は一箇所ずつ行うべきなのは、どの変更が効果を出したのか分からなくなるのを防ぐためである。
+- retrieved_top1: 改善は一箇所ずつ行うべきなのは、どの変更が効果を出したのか分からなくなるのを防ぐためである。
+- retrieval_ok: yes
+- generated_answer: 改善は一箇所ずつ行うべきなのは、どの変更が効果を出したのか分からなくなるのを防ぐためである、ということから、一度にいろいろ直すと、どの変更が効果的だったのか分からなくなり困る。
+- generation_ok: yes
+- failure_type: no_issue
+- note: 評価設計の原則に対応できている。
+
+## 14
+- type: implementation
+- question: 検索結果をそのままLLMに投げず、まとめ直すのはなぜ？
+- expected: build_contextの役割は、検索結果の複数文書をLLMが読める1つのcontext文字列にまとめることである。
+- retrieved_top1: FAISSのようなベクトル検索ライブラリを使うのは、大量の検索対象から近い文書を高速に探すためである。
+- retrieval_ok: no
+- generated_answer: 参照文書からは分かりません。
+- generation_ok: no
+- failure_type: retrieval_fail
+- note: implementation系の抽象化質問では retrieval が弱く、generation も停止した。build_context に関する言い換え追加が必要。
+
+## 15
+- type: implementation
+- question: scoreを返しておくと何がうれしい？
+- expected: scoreも一緒に返しているのは、文書の関連度を確認し、検索精度の確認やデバッグ、順位判断に使うためである。
+- retrieved_top1: scoreも一緒に返しているのは、文書の関連度を確認し、検索精度の確認やデバッグ、順位判断に使うためである。
+- retrieval_ok: yes
+- generated_answer: scoreを返しておくとうれしいのは、文書の関連度を確認でき、検索精度の確認やデバッグ、順位判断に使えるためです。
+- generation_ok: yes
+- failure_type: no_issue
+- note: implementation系でも具体的な役割を問う質問には強い。
+
+---
+
+## Day 6 Findings
+### 改善した点
+- 原因・理由系Q&Aを追加したことで、定義系だけでなく説明系・言い換え系の質問にもかなり対応できるようになった。
+- 特に retrieval失敗、文脈不足、top_k増加の危険性、data missing などの説明に強くなった。
+- paraphrase質問に対する retrieval は全体としてかなり改善している。
+
+### まだ弱い点
+- abstractな聞き方や implementation寄りの質問では、retrieval がまだ不安定な場合がある。
+- 「何が困るか」「なぜまとめ直すのか」のように、少し抽象化された実装質問は弱い。
+- 包括的な失敗原因をまとめて問う質問では、top1 が意図した文書からずれることがある。
+
+### retrievalの失敗
+- 「RAGが変な答えを出すのはどんなとき？」では top1 がRAGの定義文になっていた。
+- 「検索と生成を分けて見るべきなのはなぜ？」では top1 が FAISS の説明になっていた。
+- 「検索結果をそのままLLMに投げず、まとめ直すのはなぜ？」でも top1 が build_context ではなく FAISS 側に寄っていた。
+
+### generationの失敗
+- 「同じembeddingモデルを使わないと何が困る？」では retrievalは成功していたが、generation が「分かりません」と停止していた。
+- implementation系では、retrieval が近くても generation が質問の意図に十分対応できない場合がある。
+
+### data_missing
+- 今回の15問では明確な data_missing は少なかったが、包括的で抽象度の高い質問では、データ不足に近い不安定さが見られた。
+- 特に build_context の抽象化質問は、現状のデータではカバーが不十分だった。
+
+### 次の改善方針
+- implementation系・評価系の言い換え質問をさらに追加する。
+- 「何が困るか」「なぜ必要か」など、抽象度の高い問いに対応するQ&Aを増やす。
+- retrieval_fail と generation_fail が分かれた質問を重点的に再設計する。
