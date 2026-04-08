@@ -11,7 +11,7 @@ def main():
         if query.lower() in {"exit", "quit"}:
             break
 
-        results = retriever.search(query, top_k=3)
+        results = retriever.search(query, top_k=5)
 
         print("\n--- 検索結果 ---")
         for i, result in enumerate(results, start=1):
